@@ -21,7 +21,7 @@ def add_expense():
     query = "INSERT INTO expenses (expense_date, category, amount, description) VALUES (%s, %s, %s, %s)"
 
     cursor.execute(query, (date, category, amount, description))
-    conn.commi()
+    conn.commit()
     cursor.close()
     conn.close()
 
@@ -31,7 +31,7 @@ def view_expenses():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execut("""
+    cursor.execute("""
                 SELECT * from expenses
             """)
     
@@ -42,7 +42,7 @@ def view_expenses():
     print(
         f"{'ID':<5}{'Date':<12}"
         f"{'Category':<15}"
-        f"{'Amount':>10}"
+        f"{'Amount':<10}"
         f"{'Description':<25}"
     )
     print("-" * 80)
@@ -52,8 +52,8 @@ def view_expenses():
             f"{row[0]:<5}"
             f"{str(row[1]):<12}"
             f"{row[2]:<15}"
-            f"₹{float(row[4]):>8.2f}"
-            f"{row[3]:<25}"
+            f"₹{float(row[3]):<8.2f}"
+            f"{row[4]:<25}"
         )
 
     cursor.close()
@@ -62,7 +62,7 @@ def view_expenses():
 def show_total():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execut("SELECT sum(amount) FROM expenses")
+    cursor.execute("SELECT sum(amount) FROM expenses")
 
     total = cursor.fetchone()[0] or 0
 
@@ -75,7 +75,7 @@ def monthly_summary():
     cursor = conn.cursor()
 
     cursor.execute("""
-                   SELECT DATE_FORMT(expense_date, '%Y-%m') AS Month, sum(amount)
+                   SELECT DATE_FORMAT(expense_date, '%Y-%m') AS Month, sum(amount)
                    FROM expenses
                    GROUP by Month
                    ORDER by Month Desc
