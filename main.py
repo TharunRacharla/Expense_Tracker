@@ -1,6 +1,9 @@
 from datetime import date, timedelta
 import calendar
-
+from logic.accounts import run_accounts
+from logic.holdings import run_holdings
+from logic.reports import run_reports
+from logic.transactions import run_transactions
 
 def last_business_day():
     today = date.today()
@@ -15,34 +18,31 @@ def last_business_day():
 
     return the_date
 
-class Account():
-    def __init__(self, name, account_type="savings", balance=0):
-        self.name = name
-        self.balance = balance
-        self.account_type = account_type
+if __name__ == "__main__":
+    while True:
+        print("""========== Personal Finance Manager ==========
+                1. Manage transactions (like incomes, expenditure, ...)
+                2. Manage Accounts
+                3. Manage Holdings
+                4. View reports
+                5. Back
+              """)
+        choice = input("Select action: ")
 
-    def deposit(self, amount):
-        self.balance += amount
-
-    def withdraw(self, amount):
-        self.balance -= amount
-
-    def __str__(self):
-        return (
-            f"{self.name} "
-            f"({self.account_type}) "
-            f"₹{self.balance}"
-        )
-
-class CreditCard(Account):
-    def __init__(self, name, credit_limit, outstanding=0):
-        super().__init__(name, "credit_card", -outstanding)
-
-        self.credit_limit = credit_limit
-        self.outstanding = outstanding
-
-    def spend(self, amount):
-        self.outstanding += amount
-
-    def pay_bill(self, amount):
-        self.outstanding -= amount
+        if choice == "1":
+            run_transactions()
+        elif choice == "2":
+            run_accounts()
+        elif choice == "3":
+            run_holdings()
+        elif choice == "4":
+            run_reports()
+        elif choice == '5':
+            break
+        else:
+            print("Invalid Choice")
+    
+    
+    
+    
+    
