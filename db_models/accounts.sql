@@ -1,19 +1,23 @@
 CREATE TABLE accounts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    account_type ENUM(
-        'savings',
-        'current',
-        'credit_card',
-        'cash',
-        'wallet'
-        'dmat'
-    ) NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    opening_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
-    current_balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+    name TEXT NOT NULL,
 
-    credit_limit DECIMAL(12,2),
+    account_type TEXT NOT NULL
+        CHECK(account_type IN (
+            'savings',
+            'current',
+            'credit_card',
+            'cash',
+            'wallet',
+            'dmat'
+        )),
 
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    opening_balance REAL NOT NULL DEFAULT 0,
+
+    current_balance REAL NOT NULL DEFAULT 0,
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    credit_limit REAL
 );

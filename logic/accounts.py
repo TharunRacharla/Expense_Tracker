@@ -66,7 +66,7 @@ def add_account():
             credit_limit
         )
         VALUES
-        (%s,%s,%s,%s,%s)
+        (?,?,?,?,?)
     """
 
     cursor.execute(
@@ -149,7 +149,7 @@ def get_account(account_id):
     cursor.execute("""
         SELECT *
         FROM accounts
-        WHERE id=%s
+        WHERE id=?
     """, (account_id,))
 
     account = cursor.fetchone()
@@ -174,16 +174,16 @@ def update_balance(account_id, amount, operation):
         cursor.execute("""
             UPDATE accounts
             SET current_balance =
-                current_balance + %s
-            WHERE id=%s
+                current_balance + ?
+            WHERE id=?
         """, (amount, account_id))
 
     elif operation == "-":
         cursor.execute("""
             UPDATE accounts
             SET current_balance =
-                current_balance - %s
-            WHERE id=%s
+                current_balance - ?
+            WHERE id=?
         """, (amount, account_id))
 
     conn.commit()
@@ -208,7 +208,7 @@ def delete_account():
 
     cursor.execute("""
         DELETE FROM accounts
-        WHERE id=%s
+        WHERE id=?
     """, (account_id,))
 
     conn.commit()

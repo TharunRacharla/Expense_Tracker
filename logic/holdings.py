@@ -136,7 +136,7 @@ def add_holding():
             updated_on
         )
         VALUES
-        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (?,?,?,?,?,?,?,?,?,?,?)
     """,
     (
         account_id,
@@ -242,9 +242,9 @@ def update_last_updated_value():
 
         cur.execute("""
             UPDATE holdings
-            SET last_updated_value=%s,
+            SET last_updated_value=?,
                 updated_on=CURDATE()
-            WHERE id=%s
+            WHERE id=?
         """, (last_updated_value, holding_id))
 
         conn.commit()
@@ -269,7 +269,7 @@ def delete_holding():
 
         cur.execute("""
             DELETE FROM holdings
-            WHERE id=%s
+            WHERE id=?
         """, (holding_id,))
 
         conn.commit()

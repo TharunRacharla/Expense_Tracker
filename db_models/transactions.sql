@@ -1,15 +1,31 @@
 CREATE TABLE transactions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    account_id INT NOT NULL,
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    account_id INTEGER NOT NULL,
+
     txn_date DATETIME NOT NULL,
-    txn_type ENUM('income', 'expense', 'transfer') NOT NULL,
-    category VARCHAR(100),
-    description VARCHAR(255),
-    amount DECIMAL(12 , 2 ) NOT NULL,
-    destination_account_id INT NULL,
+
+    txn_type TEXT NOT NULL
+        CHECK(txn_type IN (
+            'income',
+            'expense',
+            'transfer'
+        )),
+
+    category TEXT,
+
+    description TEXT,
+
+    amount REAL NOT NULL,
+
+    destination_account_id INTEGER,
+
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id)
-        REFERENCES accounts (id),
-    FOREIGN KEY (destination_account_id)
-        REFERENCES accounts (id)
+
+    FOREIGN KEY(account_id)
+        REFERENCES accounts(id),
+
+    FOREIGN KEY(destination_account_id)
+        REFERENCES accounts(id)
 );

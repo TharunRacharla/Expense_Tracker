@@ -32,7 +32,7 @@ def add_transaction(txn_type):
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("INSERT INTO transactions (account_id, txn_date, txn_type, category, description, amount) VALUES (%s, %s, %s, %s, %s, %s)", 
+    cur.execute("INSERT INTO transactions (account_id, txn_date, txn_type, category, description, amount) VALUES (?, ?, ?, ?, ?, ?)", 
                 (account_id, txn_date, txn_type, category, description, amount))
     
     conn.commit()
@@ -169,7 +169,7 @@ def transfer_money():
             amount
         )
         VALUES
-        (%s,%s,%s,'transfer','Transfer',%s,%s)
+        (?,?,?,'transfer','Transfer',?,?)
     """,
     (
         from_account,

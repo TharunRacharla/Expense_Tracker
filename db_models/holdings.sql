@@ -1,17 +1,50 @@
 CREATE TABLE holdings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    account_id INT NOT NULL,
-    asset_name VARCHAR(150) NOT NULL,
-    asset_type ENUM('mutual_fund', 'stock', 'etf', 'gold', 'fd', 'bond', 'other') NOT NULL,
-    amount_invested DECIMAL(12 , 2 ) NOT NULL,
-    last_updated_value DECIMAL(12 , 2 ) NOT NULL,
-    investment_type ENUM('one_time', 'sip') DEFAULT 'one_time',
-    sip_amount DECIMAL(12 , 2 ) DEFAULT NULL,
-    sip_frequency ENUM('weekly', 'monthly', 'quarterly', 'yearly') DEFAULT NULL,
-    start_date DATE DEFAULT NULL,
-    notes VARCHAR(255),
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    account_id INTEGER NOT NULL,
+
+    asset_name TEXT NOT NULL,
+
+    asset_type TEXT NOT NULL
+        CHECK(asset_type IN (
+            'mutual_fund',
+            'stock',
+            'etf',
+            'gold',
+            'fd',
+            'bond',
+            'other'
+        )),
+
+    amount_invested REAL NOT NULL,
+
+    last_updated_value REAL NOT NULL,
+
+    investment_type TEXT DEFAULT 'one_time'
+        CHECK(investment_type IN (
+            'one_time',
+            'sip'
+        )),
+
+    sip_amount REAL,
+
+    sip_frequency TEXT
+        CHECK(sip_frequency IN (
+            'weekly',
+            'monthly',
+            'quarterly',
+            'yearly'
+        )),
+
+    start_date DATE,
+
+    notes TEXT,
+
     updated_on DATE,
+
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id)
-        REFERENCES accounts (id)
+
+    FOREIGN KEY(account_id)
+        REFERENCES accounts(id)
 );
