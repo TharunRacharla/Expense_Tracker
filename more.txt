@@ -1,0 +1,7 @@
+- subscriptions
+- emis
+- memberships
+- premiums
+- bills\
+- different taxes
+- not too complicated / simplicity by abstraction

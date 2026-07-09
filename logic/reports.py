@@ -1,4 +1,6 @@
 from db_models.database import get_connection
+import pandas as pd
+from datetime import date, timedelta
 
 def account_summary():
 
@@ -140,9 +142,9 @@ def monthly_summary():
     cur.execute("""
         SELECT
 
-            YEAR(txn_date),
+            strftime('F', txn_date),
 
-            MONTH(txn_date),
+            strftime('m', txn_date),
 
             txn_type,
 
@@ -153,13 +155,13 @@ def monthly_summary():
         WHERE txn_type IN ('income','expense')
 
         GROUP BY
-            YEAR(txn_date),
-            MONTH(txn_date),
+            strftime('Y', txn_date),
+            strftime('m', txn_date),
             txn_type
 
         ORDER BY
-            YEAR(txn_date),
-            MONTH(txn_date)
+            strftime('Y', txn_date),
+            strftime('m', txn_date)
     """)
 
     rows = cur.fetchall()
@@ -188,31 +190,48 @@ def monthly_summary():
         print()
 
 def expense_by_category():
+    today = date.today()
+    action = int(input("""Select the option you want report for:
+                       1. This month
+                       2. Compare categories between last two months.
+                       3. For the whole year"""))
+    
+    if action == 1:
+            query = """
+                    SELECT a.name, t.category, sum(t.amount) as total
+                    FROM transactions as t
+                    join accounts as a
+                    on t.account_id = a.id
+                    where t.txn_type = 'expense'
+                    and strftime("%Y", t.txn_date) = ?
+                    and strftime("%m", t.txn_date) = ?
+                    group by t.account_id, t.category 
+                    order by a.name asc, total desc
+                """
+            params = (today.strftime("%Y"), today.strftime("%m"))
 
+    elif action == 2:
+            query = """
+                    SELECT a.name, t.category, sum(t.amount) as total
+                    FROM transactions as t
+                    join accounts as a
+                    on t.account_id = a.id
+                    where t.txn_type = 'expense'
+                    and strftime("%Y", t.txn_date) = ?
+                    and strftime("%m", t.txn_date) = ?
+                    group by t.account_id, t.category 
+                    order by a.name asc, total desc
+                """
+            params = ()
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT
-            category,
-            SUM(amount)
 
-        FROM transactions
+    df = pd.read_sql_query(query, conn, params=params)
 
-        WHERE txn_type='expense'
-
-        GROUP BY category
-
-        ORDER BY SUM(amount) DESC
-    """)
-
-    rows = cur.fetchall()
-
-    print("\n====== EXPENSES BY CATEGORY ======\n")
-
-    for cat,total in rows:
-
-        print(f"{cat:<20} ₹{float(total):>12,.2f}")
+    table = df.pivot(index="category", columns="name", values="total")
+    table = table.fillna(0)
+    print(table)
 
     cur.close()
     conn.close()
