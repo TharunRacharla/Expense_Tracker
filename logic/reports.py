@@ -194,7 +194,7 @@ def expense_by_category():
     action = int(input("""Select the option you want report for:
                        1. This month
                        2. Compare categories between last two months.
-                       3. For the whole year"""))
+                       3. For the whole year \n"""))
     
     if action == 1:
             query = """
