@@ -1,7 +1,8 @@
 from db_models.database import get_connection
 import pandas as pd
+import matplotlib.pyplot as plt
 from datetime import date, timedelta
-
+import numpy as np
 def account_summary():
 
     conn = get_connection()
@@ -190,10 +191,12 @@ def monthly_summary():
         print()
 
 def expense_by_category():
+    conn = get_connection()
+    cur = conn.cursor()
     today = date.today()
     action = int(input("""Select the option you want report for:
                        1. This month
-                       2. Compare categories between last two months.
+                       2. All months
                        3. For the whole year \n"""))
     
     if action == 1:
@@ -209,29 +212,37 @@ def expense_by_category():
                     order by a.name asc, total desc
                 """
             params = (today.strftime("%Y"), today.strftime("%m"))
+            df = pd.read_sql_query(query, conn, params=params)
+            table = df.pivot(index="category", columns="name", values="total").fillna(0)
+            print(table)
 
     elif action == 2:
-            query = """
-                    SELECT a.name, t.category, sum(t.amount) as total
-                    FROM transactions as t
-                    join accounts as a
-                    on t.account_id = a.id
-                    where t.txn_type = 'expense'
-                    and strftime("%Y", t.txn_date) = ?
-                    and strftime("%m", t.txn_date) = ?
-                    group by t.account_id, t.category 
-                    order by a.name asc, total desc
-                """
+            query = "select strftime('%Y-%m', txn_date) as month, category, sum(amount) as total from transactions where txn_type = 'expense' group by strftime('%Y-%m', txn_date), category order by month, category;"
             params = ()
-    conn = get_connection()
-    cur = conn.cursor()
+            df = pd.read_sql_query(query, conn, params=params)            
+            table = df.pivot(index="month", columns="category", values="total").fillna(0)
 
+            print("\nMonthly Expenses by Category (₹)")
+            print(table.round(2))
+            
+            # Replace 0 with NaN because log(0) is undefined.
+            plot_table = table.replace(0, np.nan)
 
-    df = pd.read_sql_query(query, conn, params=params)
+            ax = plot_table.plot(
+                figsize=(12, 6),
+                marker="o",
+                linewidth=2
+            )
 
-    table = df.pivot(index="category", columns="name", values="total")
-    table = table.fillna(0)
-    print(table)
+            ax.set_yscale("log")
+
+            plt.title("Monthly Expenses by Category")
+            plt.xlabel("Month")
+            plt.ylabel("Amount (₹, log scale)")
+            plt.grid(True, which="both", linestyle="--", alpha=0.5)
+            plt.legend(title="Category", bbox_to_anchor=(1.02, 1), loc="upper left")
+            plt.tight_layout()
+            plt.show()
 
     cur.close()
     conn.close()
