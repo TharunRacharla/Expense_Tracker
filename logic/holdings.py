@@ -226,6 +226,7 @@ def view_holdings():
 
     cur.close()
     conn.close()
+    return True
 
 
 def update_last_updated_value():
@@ -243,7 +244,7 @@ def update_last_updated_value():
         cur.execute("""
             UPDATE holdings
             SET last_updated_value=?,
-                updated_on=CURDATE()
+                updated_on=date('now')
             WHERE id=?
         """, (last_updated_value, holding_id))
 
