@@ -17,7 +17,5 @@ CREATE TABLE accounts (
 
     current_balance REAL NOT NULL DEFAULT 0,
 
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
     credit_limit REAL
 );
