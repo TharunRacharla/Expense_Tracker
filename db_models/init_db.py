@@ -1,5 +1,5 @@
 from pathlib import Path
-from database import get_connection
+from db_models.database import get_connection
 
 SQL_FILES = [
     "accounts.sql",
