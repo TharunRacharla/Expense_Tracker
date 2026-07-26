@@ -1,5 +1,5 @@
 from pathlib import Path
-from db_models.database import get_connection
+from db_models.database import get_connection, get_db_path
 
 SQL_FILES = [
     "accounts.sql",
@@ -8,7 +8,13 @@ SQL_FILES = [
 ]
 
 def initialize_database():
-    conn = get_connection()
+    db_path = get_db_path()
+    if db_path.exists():
+        print(f"Database already exists at: {db_path}")
+        print("Skipping initialization to avoid modifying an existing database file.")
+        return
+
+    conn = get_connection(create_if_missing=True)
     cur = conn.cursor()
 
     sql_dir = Path(__file__).parent

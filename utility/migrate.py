@@ -2,7 +2,7 @@ import sqlite3
 from decimal import Decimal
 from datetime import date, datetime
 
-from db_models.database import get_connection
+from db_models.database import get_connection, get_db_path
 
 # --------------------------
 # Connect to MySQL
@@ -15,7 +15,9 @@ mysql_cur = mysql_conn.cursor(dictionary=True)
 # Connect to SQLite
 # --------------------------
 
-sqlite_conn = sqlite3.connect("expense_tracker.db")
+sqlite_db_path = get_db_path()
+sqlite_uri = f"file:{sqlite_db_path}?mode=rwc"
+sqlite_conn = sqlite3.connect(sqlite_uri, uri=True)
 sqlite_conn.execute("PRAGMA foreign_keys = ON")
 sqlite_cur = sqlite_conn.cursor()
 
