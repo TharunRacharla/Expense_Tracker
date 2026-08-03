@@ -143,7 +143,7 @@ with st.form("transaction_form"):
                 update_balance(destination_account_id, amount, "+")
 
             st.success("Transaction saved successfully.")
-            st.experimental_rerun()
+            st.rerun()
 
 st.markdown("---")
 

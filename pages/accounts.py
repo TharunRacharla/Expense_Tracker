@@ -119,7 +119,7 @@ with st.expander("Add new account", expanded=True):
             else:
                 insert_account(name, account_type, opening_balance, credit_limit)
                 st.success("Account created successfully.")
-                st.experimental_rerun()
+                st.rerun()
 
 st.markdown("---")
 
@@ -153,9 +153,9 @@ else:
             else:
                 update_account(selected_id, edit_name, edit_type, edit_current_balance, edit_credit_limit)
                 st.success("Account updated successfully.")
-                st.experimental_rerun()
+                st.rerun()
 
     if st.button("Delete account", key="delete_account_button"):
         delete_account(selected_id)
         st.warning("Account deleted.")
-        st.experimental_rerun()
+        st.rerun()

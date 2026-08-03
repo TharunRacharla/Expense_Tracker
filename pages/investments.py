@@ -166,7 +166,7 @@ else:
                     }
                 )
                 st.success("Investment added successfully.")
-                st.experimental_rerun()
+                st.rerun()
 
 with st.expander("Update or Delete Existing Investment"):
     if holdings_df.empty:
@@ -183,9 +183,9 @@ with st.expander("Update or Delete Existing Investment"):
         if st.button("Update Value"):
             update_holding_value(selected_id, new_value)
             st.success("Holding value updated.")
-            st.experimental_rerun()
+            st.rerun()
 
         if st.button("Delete Investment", key="delete_investment"):
             delete_holding(selected_id)
             st.success("Investment deleted.")
-            st.experimental_rerun()
+            st.rerun()
