@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import streamlit as st
 import pandas as pd
 from db_models.database import get_connection
@@ -15,14 +17,61 @@ ACCOUNT_TYPES = [
 def load_accounts():
     conn = get_connection()
     df = pd.read_sql_query(
-        "SELECT id, name, account_type, opening_balance, current_balance, credit_limit FROM accounts ORDER BY id",
+        "SELECT id, name, account_type, opening_balance, starting_balance_update_time, current_balance, credit_limit FROM accounts ORDER BY id",
+        conn,
+    )
+    conn.close()
+    balances = load_account_transaction_delta()
+    df = df.merge(balances, on="id", how="left")
+    df["transaction_delta"] = df["transaction_delta"].fillna(0)
+    df["computed_balance"] = df["opening_balance"] + df["transaction_delta"]
+    df["current_balance"] = df["computed_balance"]
+    if not df["current_balance"].equals(df["current_balance"]):
+        pass
+    reconcile_account_balances(df[["id", "computed_balance"]])
+    return df
+
+
+def load_account_transaction_delta():
+    conn = get_connection()
+    df = pd.read_sql_query(
+        """
+        SELECT
+            a.id,
+            COALESCE(SUM(
+                CASE
+                    WHEN t.txn_type = 'income' AND t.account_id = a.id THEN t.amount
+                    WHEN t.txn_type = 'expense' AND t.account_id = a.id THEN -t.amount
+                    WHEN t.txn_type = 'transfer' AND t.account_id = a.id THEN -t.amount
+                    WHEN t.txn_type = 'transfer' AND t.destination_account_id = a.id THEN t.amount
+                    ELSE 0
+                END
+            ), 0) AS transaction_delta
+        FROM accounts a
+        LEFT JOIN transactions t ON (t.account_id = a.id OR t.destination_account_id = a.id)
+            AND (a.starting_balance_update_time IS NULL OR t.txn_date >= a.starting_balance_update_time)
+        GROUP BY a.id
+        """,
         conn,
     )
     conn.close()
     return df
 
 
-def insert_account(name, account_type, opening_balance, credit_limit):
+def reconcile_account_balances(balances_df):
+    conn = get_connection()
+    cursor = conn.cursor()
+    for _, row in balances_df.iterrows():
+        cursor.execute(
+            "UPDATE accounts SET current_balance = ? WHERE id = ?",
+            (row["computed_balance"], row["id"]),
+        )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def insert_account(name, account_type, opening_balance, starting_balance_update_time, credit_limit):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -31,18 +80,19 @@ def insert_account(name, account_type, opening_balance, credit_limit):
             name,
             account_type,
             opening_balance,
+            starting_balance_update_time,
             current_balance,
             credit_limit
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (name, account_type, opening_balance, opening_balance, credit_limit),
+        (name, account_type, opening_balance, starting_balance_update_time, opening_balance, credit_limit),
     )
     conn.commit()
     cursor.close()
     conn.close()
 
 
-def update_account(account_id, name, account_type, current_balance, credit_limit):
+def update_account(account_id, name, account_type, current_balance, credit_limit, starting_balance_update_time):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -51,10 +101,11 @@ def update_account(account_id, name, account_type, current_balance, credit_limit
         SET name = ?,
             account_type = ?,
             current_balance = ?,
-            credit_limit = ?
+            credit_limit = ?,
+            starting_balance_update_time = ?
         WHERE id = ?
         """,
-        (name, account_type, current_balance, credit_limit, account_id),
+        (name, account_type, current_balance, credit_limit, starting_balance_update_time, account_id),
     )
     conn.commit()
     cursor.close()
@@ -101,6 +152,9 @@ with st.expander("Add new account", expanded=True):
         name = st.text_input("Account Name")
         account_type = st.selectbox("Account Type", ACCOUNT_TYPES)
         opening_balance = st.number_input("Opening Balance", value=0.0, format="%.2f")
+        starting_balance_date = st.date_input("Starting Balance Effective Date", value=datetime.today().date())
+        starting_balance_time = st.time_input("Starting Balance Effective Time", value=datetime.now().time().replace(second=0, microsecond=0))
+        starting_balance_update_time = datetime.combine(starting_balance_date, starting_balance_time)
         credit_limit = None
 
         if account_type == "credit_card":
@@ -117,7 +171,7 @@ with st.expander("Add new account", expanded=True):
             if not name:
                 st.error("Account name is required.")
             else:
-                insert_account(name, account_type, opening_balance, credit_limit)
+                insert_account(name, account_type, opening_balance, starting_balance_update_time, credit_limit)
                 st.success("Account created successfully.")
                 st.rerun()
 
@@ -134,10 +188,31 @@ else:
     )
     selected = accounts_df[accounts_df["id"] == selected_id].iloc[0]
 
+    def parse_datetime(value):
+        if isinstance(value, datetime):
+            return value
+        if value is None:
+            return datetime.now().replace(second=0, microsecond=0)
+        try:
+            return datetime.fromisoformat(value)
+        except Exception:
+            pass
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.strptime(value, fmt)
+            except Exception:
+                continue
+        return datetime.now().replace(second=0, microsecond=0)
+
+    selected_start_time = parse_datetime(selected["starting_balance_update_time"])
+
     with st.form("edit_account_form"):
         edit_name = st.text_input("Name", value=selected["name"])
         edit_type = st.selectbox("Account Type", ACCOUNT_TYPES, index=ACCOUNT_TYPES.index(selected["account_type"]))
         edit_current_balance = st.number_input("Current Balance", value=float(selected["current_balance"]), format="%.2f")
+        edit_starting_balance_date = st.date_input("Starting Balance Effective Date", value=selected_start_time.date())
+        edit_starting_balance_time = st.time_input("Starting Balance Effective Time", value=selected_start_time.time().replace(second=0, microsecond=0))
+        edit_starting_balance_update_time = datetime.combine(edit_starting_balance_date, edit_starting_balance_time)
         edit_credit_limit = selected["credit_limit"] if selected["credit_limit"] is not None else 0.0
         if edit_type == "credit_card":
             edit_credit_limit = st.number_input("Credit Limit", value=float(edit_credit_limit), format="%.2f")
@@ -151,7 +226,7 @@ else:
             if not edit_name:
                 st.error("Account name is required.")
             else:
-                update_account(selected_id, edit_name, edit_type, edit_current_balance, edit_credit_limit)
+                update_account(selected_id, edit_name, edit_type, edit_current_balance, edit_credit_limit, edit_starting_balance_update_time)
                 st.success("Account updated successfully.")
                 st.rerun()
 

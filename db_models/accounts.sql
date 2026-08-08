@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS accounts (
         )),
 
     opening_balance REAL NOT NULL DEFAULT 0,
-
+    starting_balance_update_time DATETIME NOT NULL,
     current_balance REAL NOT NULL DEFAULT 0,
 
     credit_limit REAL

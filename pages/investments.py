@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from datetime import date
 from db_models.database import get_connection
 
@@ -37,6 +38,94 @@ def load_holdings():
         """,
         conn,
     )
+    conn.close()
+    return df
+
+
+def load_current_month_investment_expense_by_account():
+    conn = get_connection()
+    today = date.today()
+    df = pd.read_sql_query(
+        """
+        SELECT
+            a.name AS account,
+            SUM(t.amount) AS total
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE t.txn_type = 'expense'
+            AND lower(COALESCE(t.category, '')) = 'investments'
+            AND strftime('%Y', t.txn_date) = ?
+            AND strftime('%m', t.txn_date) = ?
+        GROUP BY a.name
+        ORDER BY total DESC
+        """,
+        conn,
+        params=(today.strftime('%Y'), today.strftime('%m')),
+    )
+    conn.close()
+    return df
+
+
+def load_yearly_investment_expense_by_account():
+    conn = get_connection()
+    today = date.today()
+    df = pd.read_sql_query(
+        """
+        SELECT
+            strftime('%Y-%m', t.txn_date) AS month,
+            a.name AS account,
+            SUM(t.amount) AS total
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE t.txn_type = 'expense'
+            AND lower(COALESCE(t.category, '')) = 'investments'
+            AND strftime('%Y', t.txn_date) = ?
+        GROUP BY month, a.name
+        ORDER BY month, a.name
+        """,
+        conn,
+        params=(today.strftime('%Y'),),
+    )
+    conn.close()
+    return df
+
+
+def load_investment_expense_by_account(period="all"):
+    conn = get_connection()
+    if period == "month":
+        today = date.today()
+        df = pd.read_sql_query(
+            """
+            SELECT
+                a.name AS account,
+                SUM(t.amount) AS total
+            FROM transactions t
+            JOIN accounts a ON t.account_id = a.id
+            WHERE t.txn_type = 'expense'
+                AND lower(COALESCE(t.category, '')) = 'investments'
+                AND strftime('%Y', t.txn_date) = ?
+                AND strftime('%m', t.txn_date) = ?
+            GROUP BY a.name
+            ORDER BY total DESC
+            """,
+            conn,
+            params=(today.strftime('%Y'), today.strftime('%m')),
+        )
+    else:
+        df = pd.read_sql_query(
+            """
+            SELECT
+                a.name AS account,
+                SUM(t.amount) AS total
+            FROM transactions t
+            JOIN accounts a ON t.account_id = a.id
+            WHERE t.txn_type = 'expense'
+                AND lower(COALESCE(t.category, '')) = 'investments'
+            GROUP BY a.name
+            ORDER BY total DESC
+            """,
+            conn,
+        )
     conn.close()
     return df
 
@@ -116,7 +205,73 @@ if holdings_df.empty:
 else:
     holdings_df["gain_loss"] = holdings_df["last_updated_value"] - holdings_df["amount_invested"]
     st.dataframe(holdings_df, use_container_width=True)
-    st.markdown("---")
+st.markdown("---")
+
+st.subheader("Current Month Investment Mix")
+holdings_by_type = (
+    holdings_df.groupby("asset_type", as_index=False)["last_updated_value"].sum()
+    .rename(columns={"last_updated_value": "total"})
+)
+expense_by_account = load_current_month_investment_expense_by_account()
+
+pie_rows = []
+for _, row in holdings_by_type.iterrows():
+    pie_rows.append(
+        {
+            "label": row["asset_type"].replace("_", " ").title(),
+            "total": row["total"],
+            "type": "Holding",
+        }
+    )
+
+for _, row in expense_by_account.iterrows():
+    pie_rows.append(
+        {
+            "label": f"Expense - {row['account']}",
+            "total": row["total"],
+            "type": "Expense",
+        }
+    )
+
+if pie_rows:
+    pie_df = pd.DataFrame(pie_rows)
+    fig = px.pie(
+        pie_df,
+        names="label",
+        values="total",
+        color="type",
+        title="Current Month Investment Holdings + Investment Expenses",
+    )
+    fig.update_traces(textposition="inside", textinfo="percent+label")
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("No holdings or investment-category expenses available for the current month.")
+
+st.markdown("---")
+
+st.subheader("Yearly Investment Expenses by Account")
+yearly_df = load_yearly_investment_expense_by_account()
+if yearly_df.empty:
+    st.info("No yearly investment expense records found.")
+else:
+    yearly_df["month"] = pd.to_datetime(yearly_df["month"] + "-01")
+    fig = px.line(
+        yearly_df,
+        x="month",
+        y="total",
+        color="account",
+        markers=True,
+        title="Yearly Investment Expense Trend by Account",
+    )
+    fig.update_layout(
+        xaxis_title="Month",
+        yaxis_title="Amount (₹)",
+        legend_title="Account",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.dataframe(yearly_df, use_container_width=True)
+
+st.markdown("---")
 
 if accounts_df.empty:
     st.warning("No DMAT accounts found. Add an account of type 'dmat' before adding investments.")
@@ -167,6 +322,26 @@ else:
                 )
                 st.success("Investment added successfully.")
                 st.rerun()
+
+st.markdown("---")
+
+st.subheader("Investment Expense Breakdown")
+period = st.radio("Period", ["This month", "All time"], horizontal=True, key="investment_expense_period")
+investment_expense_df = load_investment_expense_by_account("month" if period == "This month" else "all")
+
+if investment_expense_df.empty:
+    st.info("No investment-category expenses found for this period.")
+else:
+    st.dataframe(investment_expense_df, use_container_width=True)
+    fig = px.bar(
+        investment_expense_df,
+        x="account",
+        y="total",
+        color="account",
+        title="Investment Expenses by Account",
+    )
+    fig.update_layout(yaxis_title="Amount (₹)", xaxis_title="Account", showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
 
 with st.expander("Update or Delete Existing Investment"):
     if holdings_df.empty:

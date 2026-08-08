@@ -1,6 +1,7 @@
 # accounts.py
 
 from db_models.database import get_connection
+from datetime import datetime
 
 
 def add_account():
@@ -53,6 +54,13 @@ def add_account():
             print("Invalid credit limit.")
             return
 
+    date_str = input("Starting Balance Effective Date and Time (YYYY-MM-DD HH:MM): ")
+    try:
+        starting_balance_update_time = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+    except ValueError:
+        print("Invalid date/time. Use YYYY-MM-DD HH:MM")
+        return
+
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -62,11 +70,12 @@ def add_account():
             name,
             account_type,
             opening_balance,
+            starting_balance_update_time,
             current_balance,
             credit_limit
         )
         VALUES
-        (?,?,?,?,?)
+        (?,?,?,?,?,?)
     """
 
     cursor.execute(
@@ -75,6 +84,7 @@ def add_account():
             name,
             account_type,
             opening_balance,
+            starting_balance_update_time,
             opening_balance,
             credit_limit
         )
